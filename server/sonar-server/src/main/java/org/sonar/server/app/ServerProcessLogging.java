@@ -47,6 +47,12 @@ public abstract class ServerProcessLogging {
     "sun.rmi.transport.misc",
     "sun.rmi.server.call",
     "sun.rmi.dgc");
+  protected static final Set<String> MSQDRIVER_LOGGER_NAMES_TO_TURN_OFF = ImmutableSet.of(
+    "com.microsoft.sqlserver.jdbc.internals.TDS.Reader",
+    "com.microsoft.sqlserver.jdbc.internals.TDS.TOKEN",
+    "com.microsoft.sqlserver.jdbc.internals.TDS.DATA",
+    "com.microsoft.sqlserver.jdbc.ResultSet",
+    "com.microsoft.sqlserver.jdbc.internals.SQLServerResultSet");
   private final ProcessId processId;
   private final String threadIdFieldPattern;
   private final LogbackHelper helper = new LogbackHelper();
