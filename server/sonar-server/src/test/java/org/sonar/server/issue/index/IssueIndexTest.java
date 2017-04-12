@@ -50,6 +50,7 @@ import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchOptions;
 import org.sonar.server.es.SearchResult;
 import org.sonar.server.issue.IssueQuery;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.permission.index.AuthorizationTypeSupport;
 import org.sonar.server.permission.index.PermissionIndexerDao;
 import org.sonar.server.permission.index.PermissionIndexerTester;
@@ -95,7 +96,7 @@ public class IssueIndexTest {
 
   private IssueIndexer issueIndexer = new IssueIndexer(tester.client(), new IssueIteratorFactory(null));
   private ViewIndexer viewIndexer = new ViewIndexer(null, tester.client());
-  private RuleIndexer ruleIndexer = new RuleIndexer(tester.client(), db.getDbClient());
+  private RuleIndexer ruleIndexer = new RuleIndexer(tester.client(), db.getDbClient(), TestOrganizationFlags.standalone().setEnabled(true));
   private PermissionIndexerTester authorizationIndexerTester = new PermissionIndexerTester(tester, issueIndexer);
 
   private IssueIndex underTest = new IssueIndex(tester.client(), system2, userSessionRule, new AuthorizationTypeSupport(userSessionRule)
@@ -1328,10 +1329,10 @@ public class IssueIndexTest {
   @Test
   public void list_tags() {
     RuleDefinitionDto r1 = db.rules().insert();
-    ruleIndexer.indexRuleDefinition(r1.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r1.getKey());
 
     RuleDefinitionDto r2 = db.rules().insert();
-    ruleIndexer.indexRuleDefinition(r2.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r2.getKey());
 
     OrganizationDto org = db.organizations().insert();
     ComponentDto project = newProjectDto(newOrganizationDto());

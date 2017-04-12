@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
@@ -73,27 +74,21 @@ public class RuleIteratorForSingleChunk implements RuleIterator {
     "LEFT OUTER JOIN rules t ON t.id=r.template_id";
   private static final Splitter TAGS_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
-  private final DbSession session;
-
   private final List<RuleKey> ruleKeys;
+  private final boolean avoidTemplates;
 
   private final PreparedStatement stmt;
   private final ResultSetIterator<RuleDocWithSystemScope> iterator;
 
-  RuleIteratorForSingleChunk(DbClient dbClient, @Nullable List<RuleKey> ruleKeys) {
+  RuleIteratorForSingleChunk(DbClient dbClient, DbSession session, @Nullable List<RuleKey> ruleKeys, boolean avoidTemplates) {
     checkArgument(ruleKeys == null || ruleKeys.size() <= DatabaseUtils.PARTITION_SIZE_FOR_ORACLE,
       "Cannot search for more than " + DatabaseUtils.PARTITION_SIZE_FOR_ORACLE + " rule keys at once. Please provide the keys in smaller chunks.");
     this.ruleKeys = ruleKeys;
-    this.session = dbClient.openSession(false);
+    this.avoidTemplates = avoidTemplates;
 
-    try {
-      String sql = createSql();
-      stmt = dbClient.getMyBatis().newScrollingSelectStatement(session, sql);
-      iterator = createIterator();
-    } catch (Exception e) {
-      session.close();
-      throw new IllegalStateException("Fail to prepare SQL request to select all rules", e);
-    }
+    String sql = createSql();
+    stmt = dbClient.getMyBatis().newScrollingSelectStatement(session, sql);
+    iterator = createIterator();
   }
 
   private RuleIteratorInternal createIterator() {
@@ -118,12 +113,21 @@ public class RuleIteratorForSingleChunk implements RuleIterator {
 
   private String createSql() {
     StringBuilder sql = new StringBuilder(SQL_ALL);
+    AtomicBoolean whereAdded = new AtomicBoolean();
     if (ruleKeys != null && !ruleKeys.isEmpty()) {
-      sql.append(" WHERE ");
+      if (whereAdded.getAndSet(true)) {
+        sql.append(" WHERE ");
+      }
       sql.append(ruleKeys.stream()
         .map(x -> "(r.plugin_name=? AND r.plugin_rule_key=?)")
         .collect(joining(" OR "))
       );
+    }
+    if (avoidTemplates) {
+      if (whereAdded.getAndSet(true)) {
+        sql.append(" WHERE ");
+      }
+      sql.append("r.is_template = ?");
     }
     return sql.toString();
   }
@@ -136,6 +140,9 @@ public class RuleIteratorForSingleChunk implements RuleIterator {
         stmt.setString(index.getAndIncrement(), ruleKey.rule());
       }
     }
+    if (avoidTemplates) {
+      stmt.setBoolean(index.getAndIncrement(), false);
+    }
   }
 
   @Override
@@ -144,7 +151,6 @@ public class RuleIteratorForSingleChunk implements RuleIterator {
       iterator.close();
     } finally {
       DatabaseUtils.closeQuietly(stmt);
-      session.close();
     }
   }
 

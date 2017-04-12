@@ -31,7 +31,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.server.es.EsTester;
-import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +45,7 @@ public class RuleIndexerTest {
   public DbTester dbTester = DbTester.create();
 
   private DbClient dbClient = dbTester.getDbClient();
-  private final RuleIndexer underTest = new RuleIndexer(esTester.client(), dbClient);
+  private final RuleIndexer underTest = new RuleIndexer(esTester.client(), dbClient, TestOrganizationFlags.standalone().setEnabled(true));
   private DbSession dbSession = dbTester.getSession();
   private RuleDefinitionDto rule = new RuleDefinitionDto()
     .setRuleKey("S001")
@@ -74,7 +74,7 @@ public class RuleIndexerTest {
     dbClient.ruleDao().insert(dbSession, rule);
     dbSession.commit();
 
-    underTest.indexRuleDefinition(rule.getKey());
+    underTest.indexRuleDefinition(dbSession, rule.getKey());
 
     assertThat(esTester.countDocuments(RuleIndexDefinition.INDEX_TYPE_RULE)).isEqualTo(1);
   }
@@ -84,13 +84,13 @@ public class RuleIndexerTest {
     // Create and Index rule
     dbClient.ruleDao().insert(dbSession, rule.setStatus(RuleStatus.READY));
     dbSession.commit();
-    underTest.indexRuleDefinition(rule.getKey());
+    underTest.indexRuleDefinition(dbSession, rule.getKey());
     assertThat(esTester.countDocuments(RuleIndexDefinition.INDEX_TYPE_RULE)).isEqualTo(1);
 
     // Remove rule
     dbTester.getDbClient().ruleDao().update(dbTester.getSession(), rule.setStatus(RuleStatus.READY).setUpdatedAt(2000000000000L));
     dbTester.getSession().commit();
-    underTest.indexRuleDefinition(rule.getKey());
+    underTest.indexRuleDefinition(dbSession, rule.getKey());
 
     assertThat(esTester.countDocuments(RuleIndexDefinition.INDEX_TYPE_RULE)).isEqualTo(1);
   }

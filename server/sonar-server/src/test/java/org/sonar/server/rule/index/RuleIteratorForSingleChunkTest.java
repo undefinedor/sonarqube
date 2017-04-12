@@ -87,7 +87,7 @@ public class RuleIteratorForSingleChunkTest {
   public void iterator_over_one_rule() {
     dbTester.rules().insert(templateRule);
 
-    List<RuleDocWithSystemScope> results = getResults();
+    List<RuleDocWithSystemScope> results = getResults(false);
 
     assertThat(results).hasSize(1);
 
@@ -116,7 +116,7 @@ public class RuleIteratorForSingleChunkTest {
     dbClient.ruleDao().insert(dbSession, customRule);
     dbSession.commit();
 
-    List<RuleDocWithSystemScope> results = getResults();
+    List<RuleDocWithSystemScope> results = getResults(false);
 
     assertThat(results).hasSize(2);
 
@@ -156,12 +156,22 @@ public class RuleIteratorForSingleChunkTest {
   }
 
   @Test
+  public void iterator_over_rules_with_organizations_enabled_must_not_return_template_rules() {
+    dbTester.rules().insert(templateRule);
+    dbSession.commit();
+
+    List<RuleDocWithSystemScope> results = getResults(true);
+
+    assertThat(results).hasSize(0);
+  }
+
+  @Test
   public void custom_rule() {
     dbTester.rules().insert(templateRule);
     dbClient.ruleDao().insert(dbSession, customRule.setTemplateId(templateRule.getId()));
     dbSession.commit();
 
-    List<RuleDocWithSystemScope> results = getResults();
+    List<RuleDocWithSystemScope> results = getResults(false);
 
     assertThat(results).hasSize(2);
 
@@ -181,13 +191,13 @@ public class RuleIteratorForSingleChunkTest {
     dbTester.rules().insert(templateRule.setStatus(RuleStatus.REMOVED));
     dbSession.commit();
 
-    List<RuleDocWithSystemScope> results = getResults();
+    List<RuleDocWithSystemScope> results = getResults(false);
 
     assertThat(results).hasSize(1);
   }
 
-  private List<RuleDocWithSystemScope> getResults() {
-    return Lists.newArrayList(new RuleIteratorForSingleChunk(dbTester.getDbClient(), null));
+  private List<RuleDocWithSystemScope> getResults(boolean organizationsEnabled) {
+    return Lists.newArrayList(new RuleIteratorForSingleChunk(dbTester.getDbClient(), dbSession, null, organizationsEnabled));
   }
 
   private RuleDocWithSystemScope getRuleDoc(List<RuleDocWithSystemScope> results, String ruleKey) {

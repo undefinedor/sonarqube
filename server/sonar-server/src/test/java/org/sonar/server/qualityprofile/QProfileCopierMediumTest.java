@@ -85,13 +85,13 @@ public class QProfileCopierMediumTest {
     db.ruleDao().insertRuleParam(dbSession, xooRule1Definition, RuleParamDto.createFor(xooRule1Definition)
       .setName("max").setDefaultValue("10").setType(RuleParamType.INTEGER.type()));
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(xooRule1Definition.getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, xooRule1Definition.getKey());
 
     RuleDto xooRule2 = RuleTesting.newXooX2().setSeverity("MAJOR");
     RuleDefinitionDto xooRule2Definition = xooRule2.getDefinition();
     db.ruleDao().insert(dbSession, xooRule2Definition);
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(xooRule2Definition.getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, xooRule2Definition.getKey());
 
     // create pre-defined profile
     sourceProfile = QProfileTesting.newXooP1(organization);

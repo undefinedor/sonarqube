@@ -81,11 +81,11 @@ public class RuleUpdater {
     apply(update, rule, userSession);
     update(dbSession, rule);
     updateParameters(dbSession, organization, update, rule);
-    dbSession.commit();
 
     RuleKey ruleKey = rule.getKey();
-    ruleIndexer.indexRuleDefinition(ruleKey);
+    ruleIndexer.indexRuleDefinition(dbSession, ruleKey);
     ruleIndexer.indexRuleExtension(organization, ruleKey);
+    dbSession.commit();
     return true;
   }
 

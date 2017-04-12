@@ -42,6 +42,7 @@ import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.qualityprofile.QProfileTesting;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
 import org.sonar.server.rule.index.RuleIndexDefinition;
@@ -84,7 +85,7 @@ public class ShowActionTest {
   private WsAction underTest = new ShowAction(dbClient, mapper, activeRuleCompleter, defaultOrganizationProvider);
   private WsActionTester actionTester = new WsActionTester(underTest);
 
-  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient);
+  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient, TestOrganizationFlags.standalone().setEnabled(true));
 
   @Before
   public void before() {
@@ -223,7 +224,7 @@ public class ShowActionTest {
 
   private RuleDefinitionDto insertRule() {
     RuleDefinitionDto rule = dbTester.rules().insert();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), rule.getKey());
     return rule;
   }
 

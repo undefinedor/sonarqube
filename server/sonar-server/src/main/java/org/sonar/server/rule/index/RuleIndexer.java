@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -34,8 +35,11 @@ import org.sonar.server.es.BulkIndexer.Size;
 import org.sonar.server.es.EsClient;
 import org.sonar.server.es.IndexType;
 import org.sonar.server.es.StartupIndexer;
+import org.sonar.server.organization.OrganizationFlags;
 
 import static java.util.Collections.singletonList;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_RULE_IS_TEMPLATE;
 import static org.sonar.server.rule.index.RuleIndexDefinition.INDEX_TYPE_RULE;
 import static org.sonar.server.rule.index.RuleIndexDefinition.INDEX_TYPE_RULE_EXTENSION;
 
@@ -43,10 +47,12 @@ public class RuleIndexer implements StartupIndexer {
 
   private final EsClient esClient;
   private final DbClient dbClient;
+  private final OrganizationFlags organizationFlags;
 
-  public RuleIndexer(EsClient esClient, DbClient dbClient) {
+  public RuleIndexer(EsClient esClient, DbClient dbClient, OrganizationFlags organizationFlags) {
     this.esClient = esClient;
     this.dbClient = dbClient;
+    this.organizationFlags = organizationFlags;
   }
 
   @Override
@@ -56,35 +62,39 @@ public class RuleIndexer implements StartupIndexer {
 
   @Override
   public void indexOnStartup(Set<IndexType> uninitializedIndexTypes) {
-    BulkIndexer bulk = new BulkIndexer(esClient, RuleIndexDefinition.INDEX).setSize(Size.LARGE);
-    bulk.start();
+    try (DbSession dbSession = dbClient.openSession(true)) {
+      boolean organizationsEnabled = organizationFlags.isEnabled(dbSession);
+      BulkIndexer bulk = new BulkIndexer(esClient, RuleIndexDefinition.INDEX).setSize(Size.LARGE);
+      bulk.start();
 
-    // index all definitions and system extensions
-    if (uninitializedIndexTypes.contains(INDEX_TYPE_RULE)) {
-      try (RuleIterator rules = new RuleIteratorForSingleChunk(dbClient, null)) {
-        doIndexRuleDefinitions(rules, bulk);
+      // index all definitions and system extensions
+      if (uninitializedIndexTypes.contains(INDEX_TYPE_RULE)) {
+        try (RuleIterator rules = new RuleIteratorForSingleChunk(dbClient, dbSession, null, organizationsEnabled)) {
+          doIndexRuleDefinitions(rules, bulk);
+        }
       }
-    }
 
-    // index all organization extensions
-    if (uninitializedIndexTypes.contains(INDEX_TYPE_RULE_EXTENSION)) {
-      try (RuleMetadataIterator metadatas = new RuleMetadataIterator(dbClient)) {
-        doIndexRuleExtensions(metadatas, bulk);
+      // index all organization extensions
+      if (uninitializedIndexTypes.contains(INDEX_TYPE_RULE_EXTENSION)) {
+        try (RuleMetadataIterator metadatas = new RuleMetadataIterator(dbClient, dbSession, organizationsEnabled)) {
+          doIndexRuleExtensions(metadatas, bulk);
+        }
       }
-    }
 
-    bulk.stop();
+      bulk.stop();
+    }
   }
 
-  public void indexRuleDefinition(RuleKey ruleKey) {
-    indexRuleDefinitions(singletonList(ruleKey));
+  public void indexRuleDefinition(DbSession dbSession, RuleKey ruleKey) {
+    indexRuleDefinitions(dbSession, singletonList(ruleKey));
   }
 
-  public void indexRuleDefinitions(List<RuleKey> ruleKeys) {
+  public void indexRuleDefinitions(DbSession dbSession, List<RuleKey> ruleKeys) {
     BulkIndexer bulk = new BulkIndexer(esClient, RuleIndexDefinition.INDEX).setSize(Size.REGULAR);
     bulk.start();
 
-    try (RuleIterator rules = new RuleIteratorForMultipleChunks(dbClient, ruleKeys)) {
+    boolean organizationsEnabled = organizationFlags.isEnabled(dbSession);
+    try (RuleIterator rules = new RuleIteratorForMultipleChunks(dbClient, dbSession, ruleKeys, organizationsEnabled)) {
       doIndexRuleDefinitions(rules, bulk);
     }
 
@@ -132,5 +142,11 @@ public class RuleIndexer implements StartupIndexer {
     return new IndexRequest(INDEX_TYPE_RULE_EXTENSION.getIndex(), INDEX_TYPE_RULE_EXTENSION.getType())
       .source(ruleExtension.getFields())
       .parent(ruleExtension.getParent());
+  }
+
+  public void deleteRuleTemplatesFromIndex() {
+    SearchRequestBuilder search = esClient.prepareSearch(INDEX_TYPE_RULE)
+      .setQuery(termQuery(FIELD_RULE_IS_TEMPLATE, true));
+    BulkIndexer.delete(esClient, INDEX_TYPE_RULE.getIndex(), search);
   }
 }

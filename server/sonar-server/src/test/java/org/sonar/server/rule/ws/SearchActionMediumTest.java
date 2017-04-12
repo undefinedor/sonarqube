@@ -637,7 +637,7 @@ public class SearchActionMediumTest {
 
   private void insertRule(RuleDefinitionDto definition) {
     ruleDao.insert(dbSession, definition);
+    ruleIndexer.indexRuleDefinition(dbSession, definition.getKey());
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(definition.getKey());
   }
 }

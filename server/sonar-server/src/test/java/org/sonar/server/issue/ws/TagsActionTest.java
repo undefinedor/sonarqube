@@ -38,6 +38,7 @@ import org.sonar.server.issue.index.IssueIndexDefinition;
 import org.sonar.server.issue.index.IssueIndexer;
 import org.sonar.server.issue.index.IssueIteratorFactory;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.permission.index.AuthorizationTypeSupport;
 import org.sonar.server.rule.index.RuleIndex;
 import org.sonar.server.rule.index.RuleIndexDefinition;
@@ -63,7 +64,7 @@ public class TagsActionTest {
   public EsTester es = new EsTester(new IssueIndexDefinition(new MapSettings()), new RuleIndexDefinition(new MapSettings()));
 
   private IssueIndexer issueIndexer = new IssueIndexer(es.client(), new IssueIteratorFactory(db.getDbClient()));
-  private RuleIndexer ruleIndexer = new RuleIndexer(es.client(), db.getDbClient());
+  private RuleIndexer ruleIndexer = new RuleIndexer(es.client(), db.getDbClient(), TestOrganizationFlags.standalone().setEnabled(true));
   private IssueIndex issueIndex = new IssueIndex(es.client(), System2.INSTANCE, userSession, new AuthorizationTypeSupport(userSession));
   private RuleIndex ruleIndex = new RuleIndex(es.client());
 
@@ -90,12 +91,12 @@ public class TagsActionTest {
   @Test
   public void return_tags_from_rules() throws Exception {
     RuleDefinitionDto r = db.rules().insert(setSystemTags("tag1"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r.getKey());
     db.rules().insertOrUpdateMetadata(r, organization, setTags("tag2"));
     ruleIndexer.indexRuleExtension(organization, r.getKey());
 
     RuleDefinitionDto r2 = db.rules().insert(setSystemTags("tag3"));
-    ruleIndexer.indexRuleDefinition(r2.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r2.getKey());
     db.rules().insertOrUpdateMetadata(r2, organization, setTags("tag4", "tag5"));
     ruleIndexer.indexRuleExtension(organization, r2.getKey());
 
@@ -112,7 +113,7 @@ public class TagsActionTest {
     issueIndexer.indexOnStartup(null);
 
     RuleDefinitionDto r = db.rules().insert(setSystemTags("tag6"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r.getKey());
     db.rules().insertOrUpdateMetadata(r, organization, setTags("tag7"));
     ruleIndexer.indexRuleExtension(organization, r.getKey());
 
@@ -160,7 +161,7 @@ public class TagsActionTest {
     issueIndexer.indexOnStartup(null);
 
     RuleDefinitionDto r = db.rules().insert(setSystemTags("cwe"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
+    ruleIndexer.indexRuleDefinition(db.getSession(), r.getKey());
     db.rules().insertOrUpdateMetadata(r, organization, setTags("security"));
     ruleIndexer.indexRuleExtension(organization, r.getKey());
 

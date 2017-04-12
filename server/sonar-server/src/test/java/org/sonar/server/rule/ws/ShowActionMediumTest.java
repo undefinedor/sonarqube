@@ -270,8 +270,8 @@ public class ShowActionMediumTest {
       .setCreatedAt(new Date().getTime())
       .setUpdatedAt(new Date().getTime());
     ruleDao.insert(session, ruleDto);
+    ruleIndexer.indexRuleDefinition(session, ruleDto.getKey());
     session.commit();
-    ruleIndexer.indexRuleDefinition(ruleDto.getKey());
     RuleParamDto regexParam = RuleParamDto.createFor(ruleDto).setName("regex").setType("STRING").setDescription("Reg *exp*").setDefaultValue(".*");
     ruleDao.insertRuleParam(session, ruleDto, regexParam);
 

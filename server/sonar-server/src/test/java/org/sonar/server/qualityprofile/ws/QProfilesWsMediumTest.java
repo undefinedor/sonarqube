@@ -102,7 +102,7 @@ public class QProfilesWsMediumTest {
     RuleDefinitionDto rule = createRule(profile.getLanguage(), "toto");
     createActiveRule(rule, profile);
     session.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
+    ruleIndexer.indexRuleDefinition(session, rule.getKey());
     activeRuIndexer.index();
 
     // 0. Assert No Active Rule for profile
@@ -201,8 +201,8 @@ public class QProfilesWsMediumTest {
   public void activate_rule() throws Exception {
     QualityProfileDto profile = createProfile("java");
     RuleDefinitionDto rule = createRule(profile.getLanguage(), "toto");
+    ruleIndexer.indexRuleDefinition(session, rule.getKey());
     session.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
 
     // 0. Assert No Active Rule for profile
     assertThat(db.activeRuleDao().selectByProfileKey(session, profile.getKey())).isEmpty();
@@ -222,8 +222,8 @@ public class QProfilesWsMediumTest {
   public void activate_rule_diff_languages() throws Exception {
     QualityProfileDto profile = createProfile("java");
     RuleDefinitionDto rule = createRule("php", "toto");
+    ruleIndexer.indexRuleDefinition(session, rule.getKey());
     session.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
 
     // 0. Assert No Active Rule for profile
     assertThat(db.activeRuleDao().selectByProfileKey(session, profile.getKey())).isEmpty();
@@ -245,8 +245,8 @@ public class QProfilesWsMediumTest {
   public void activate_rule_override_severity() throws Exception {
     QualityProfileDto profile = createProfile("java");
     RuleDefinitionDto rule = createRule(profile.getLanguage(), "toto");
+    ruleIndexer.indexRuleDefinition(session, rule.getKey());
     session.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
 
     // 0. Assert No Active Rule for profile
     assertThat(db.activeRuleDao().selectByProfileKey(session, profile.getKey())).isEmpty();
@@ -443,8 +443,8 @@ public class QProfilesWsMediumTest {
       .setSeverity(Severity.BLOCKER)
       .setStatus(RuleStatus.READY);
     db.ruleDao().insert(session, rule);
+    ruleIndexer.indexRuleDefinition(session, rule.getKey());
     session.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
     return rule;
   }
 

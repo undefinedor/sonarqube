@@ -36,6 +36,7 @@ import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.rule.RuleUpdater;
 import org.sonar.server.rule.index.RuleIndexDefinition;
 import org.sonar.server.rule.index.RuleIndexer;
@@ -84,7 +85,7 @@ public class UpdateActionTest {
   private MacroInterpreter macroInterpreter = mock(MacroInterpreter.class);
   private Languages languages = new Languages();
   private RuleMapper mapper = new RuleMapper(languages, macroInterpreter);
-  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient);
+  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient, TestOrganizationFlags.standalone().setEnabled(true));
   private RuleUpdater ruleUpdater = new RuleUpdater(dbClient, ruleIndexer, System2.INSTANCE);
   private RuleWsSupport ruleWsSupport = new RuleWsSupport(dbClient, userSession, defaultOrganizationProvider);
   private WsAction underTest = new UpdateAction(dbClient, ruleUpdater, mapper, userSession, ruleWsSupport, defaultOrganizationProvider);

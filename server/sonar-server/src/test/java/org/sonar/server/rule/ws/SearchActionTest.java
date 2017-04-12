@@ -38,6 +38,7 @@ import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.rule.index.RuleIndex;
 import org.sonar.server.rule.index.RuleIndexDefinition;
 import org.sonar.server.rule.index.RuleIndexer;
@@ -78,7 +79,7 @@ public class SearchActionTest {
   private WsAction underTest = new SearchAction(ruleIndex, activeRuleCompleter, ruleQueryFactory, dbClient, mapper);
   private WsActionTester actionTester = new WsActionTester(underTest);
 
-  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient);
+  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient, TestOrganizationFlags.standalone().setEnabled(true));
 
   @Before
   public void before() {
@@ -217,7 +218,7 @@ public class SearchActionTest {
   @SafeVarargs
   private final RuleDefinitionDto insertRuleDefinition(Consumer<RuleDefinitionDto>... populaters) {
     RuleDefinitionDto ruleDefinitionDto = dbTester.rules().insert(populaters);
-    ruleIndexer.indexRuleDefinition(ruleDefinitionDto.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), ruleDefinitionDto.getKey());
     return ruleDefinitionDto;
   }
 

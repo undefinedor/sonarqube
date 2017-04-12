@@ -52,26 +52,20 @@ public class RuleMetadataIterator implements Iterator<RuleExtensionDoc>, AutoClo
     "WHERE rm.tags is not null AND rm.tags != ''";
   private static final Splitter TAGS_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
-  private final DbSession session;
-
   private final PreparedStatement stmt;
   private final ResultSetIterator<RuleExtensionDoc> iterator;
+  private final boolean avoidTemplates;
 
-  RuleMetadataIterator(DbClient dbClient) {
-    this.session = dbClient.openSession(false);
-
-    try {
-      String sql = SQL_ALL;
-      stmt = dbClient.getMyBatis().newScrollingSelectStatement(session, sql);
-      iterator = createIterator();
-    } catch (Exception e) {
-      session.close();
-      throw new IllegalStateException("Fail to prepare SQL request to select all rules", e);
-    }
+  RuleMetadataIterator(DbClient dbClient, DbSession dbSession, boolean avoidTemplates) {
+    this.avoidTemplates = avoidTemplates;
+    String sql = createSql();
+    stmt = dbClient.getMyBatis().newScrollingSelectStatement(dbSession, sql);
+    iterator = createIterator();
   }
 
   private RuleMetadataIteratorInternal createIterator() {
     try {
+      setParameters(stmt);
       return new RuleMetadataIteratorInternal(stmt);
     } catch (SQLException e) {
       DatabaseUtils.closeQuietly(stmt);
@@ -89,13 +83,26 @@ public class RuleMetadataIterator implements Iterator<RuleExtensionDoc>, AutoClo
     return iterator.next();
   }
 
+  private String createSql() {
+    StringBuilder sql = new StringBuilder(SQL_ALL);
+    if (avoidTemplates) {
+      sql.append(" WHERE r.is_template = ?");
+    }
+    return sql.toString();
+  }
+
+  private void setParameters(PreparedStatement stmt) throws SQLException {
+    if (avoidTemplates) {
+      stmt.setBoolean(1, false);
+    }
+  }
+
   @Override
   public void close() {
     try {
       iterator.close();
     } finally {
       DatabaseUtils.closeQuietly(stmt);
-      session.close();
     }
   }
 

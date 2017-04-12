@@ -42,6 +42,7 @@ import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.qualityprofile.QProfileLookup;
 import org.sonar.server.qualityprofile.QProfileName;
 import org.sonar.server.qualityprofile.QProfileTesting;
@@ -81,7 +82,7 @@ public class InheritanceActionTest {
     dbClient = dbTester.getDbClient();
     dbSession = dbTester.getSession();
     esClient = esTester.client();
-    ruleIndexer = new RuleIndexer(esClient, dbClient);
+    ruleIndexer = new RuleIndexer(esClient, dbClient, TestOrganizationFlags.standalone().setEnabled(true));
     activeRuleIndexer = new ActiveRuleIndexer(System2.INSTANCE, dbClient, esClient);
     TestDefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(dbTester);
     underTest = new InheritanceAction(
@@ -184,7 +185,7 @@ public class InheritanceActionTest {
       .setCreatedAt(now);
     dbClient.ruleDao().insert(dbSession, rule);
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(rule.getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, rule.getKey());
     return rule;
   }
 

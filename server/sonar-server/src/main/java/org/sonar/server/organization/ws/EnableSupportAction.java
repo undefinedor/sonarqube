@@ -24,9 +24,10 @@ import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.permission.OrganizationPermission;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.OrganizationFlags;
-import org.sonar.db.permission.OrganizationPermission;
+import org.sonar.server.rule.index.RuleIndexer;
 import org.sonar.server.user.UserSession;
 
 import static java.util.Objects.requireNonNull;
@@ -38,13 +39,15 @@ public class EnableSupportAction implements OrganizationsWsAction {
   private final DbClient dbClient;
   private final DefaultOrganizationProvider defaultOrganizationProvider;
   private final OrganizationFlags organizationFlags;
+  private final RuleIndexer ruleIndexer;
 
   public EnableSupportAction(UserSession userSession, DbClient dbClient, DefaultOrganizationProvider defaultOrganizationProvider,
-    OrganizationFlags organizationFlags) {
+    OrganizationFlags organizationFlags, RuleIndexer ruleIndexer) {
     this.userSession = userSession;
     this.dbClient = dbClient;
     this.defaultOrganizationProvider = defaultOrganizationProvider;
     this.organizationFlags = organizationFlags;
+    this.ruleIndexer = ruleIndexer;
   }
 
   @Override
@@ -66,6 +69,7 @@ public class EnableSupportAction implements OrganizationsWsAction {
       if (isSupportDisabled(dbSession)) {
         flagCurrentUserAsRoot(dbSession);
         enableFeature(dbSession);
+        removeRuleTemplatesFromIndex();
         dbSession.commit();
       }
     }
@@ -88,4 +92,7 @@ public class EnableSupportAction implements OrganizationsWsAction {
     organizationFlags.enable(dbSession);
   }
 
+  private void removeRuleTemplatesFromIndex() {
+    ruleIndexer.deleteRuleTemplatesFromIndex();
+  }
 }

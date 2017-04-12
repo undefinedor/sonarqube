@@ -90,7 +90,7 @@ public class RuleDeleterMediumTest {
       .setUpdatedAt(PAST);
     dao.insert(dbSession, templateRule.getDefinition());
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(templateRule.getDefinition().getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, templateRule.getDefinition().getKey());
 
     // Verify in index
     assertThat(index.searchAll(new RuleQuery())).containsOnly(templateRule.getKey());
@@ -102,7 +102,7 @@ public class RuleDeleterMediumTest {
       .setUpdatedAt(PAST);
     dao.insert(dbSession, customRule.getDefinition());
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(customRule.getDefinition().getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, customRule.getDefinition().getKey());
 
     // Verify in index
     assertThat(index.searchAll(new RuleQuery())).containsOnly(templateRule.getKey(), customRule.getKey());

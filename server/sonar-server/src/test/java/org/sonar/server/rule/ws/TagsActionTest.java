@@ -32,6 +32,7 @@ import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.rule.index.RuleIndex;
 import org.sonar.server.rule.index.RuleIndexDefinition;
 import org.sonar.server.rule.index.RuleIndexer;
@@ -55,7 +56,7 @@ public class TagsActionTest {
   private DbClient dbClient = dbTester.getDbClient();
   private EsClient esClient = esTester.client();
   private RuleIndex ruleIndex = new RuleIndex(esClient);
-  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient);
+  private RuleIndexer ruleIndexer = new RuleIndexer(esClient, dbClient, TestOrganizationFlags.standalone().setEnabled(true));
 
   private WsActionTester tester = new WsActionTester(new org.sonar.server.rule.ws.TagsAction(ruleIndex, dbClient, TestDefaultOrganizationProvider.from(dbTester)));
   private OrganizationDto organization;
@@ -99,7 +100,7 @@ public class TagsActionTest {
   @Test
   public void return_system_tag() throws Exception {
     RuleDefinitionDto r = dbTester.rules().insert(setSystemTags("tag"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), r.getKey());
 
     String result = tester.newRequest().execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[\"tag\"]}");
@@ -108,7 +109,7 @@ public class TagsActionTest {
   @Test
   public void return_tag() throws Exception {
     RuleDefinitionDto r = dbTester.rules().insert(setSystemTags());
-    ruleIndexer.indexRuleDefinition(r.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), r.getKey());
     dbTester.rules().insertOrUpdateMetadata(r, organization, setTags("tag"));
     ruleIndexer.indexRuleExtension(organization, r.getKey());
 

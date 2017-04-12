@@ -39,6 +39,7 @@ import org.sonar.db.rule.RuleMetadataDto;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchIdResult;
 import org.sonar.server.es.SearchOptions;
+import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.qualityprofile.index.ActiveRuleDoc;
 import org.sonar.server.qualityprofile.index.ActiveRuleDocTesting;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
@@ -101,7 +102,7 @@ public class RuleIndexTest {
 
   @Before
   public void setUp() {
-    ruleIndexer = new RuleIndexer(tester.client(), dbTester.getDbClient());
+    ruleIndexer = new RuleIndexer(tester.client(), dbTester.getDbClient(), TestOrganizationFlags.standalone().setEnabled(true));
     activeRuleIndexer = new ActiveRuleIndexer(system2, dbTester.getDbClient(), tester.client());
     index = new RuleIndex(tester.client());
   }
@@ -261,7 +262,7 @@ public class RuleIndexTest {
   @SafeVarargs
   private final RuleDefinitionDto createRule(Consumer<RuleDefinitionDto>... populaters) {
     RuleDefinitionDto ruleDto = dbTester.rules().insert(populaters);
-    ruleIndexer.indexRuleDefinition(ruleDto.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), ruleDto.getKey());
     return ruleDto;
   }
 
@@ -1020,7 +1021,7 @@ public class RuleIndexTest {
   @SafeVarargs
   private final RuleDefinitionDto insertRuleDefinition(Consumer<RuleDefinitionDto>... populaters) {
     RuleDefinitionDto ruleDefinitionDto = dbTester.rules().insert(populaters);
-    ruleIndexer.indexRuleDefinition(ruleDefinitionDto.getKey());
+    ruleIndexer.indexRuleDefinition(dbTester.getSession(), ruleDefinitionDto.getKey());
     return ruleDefinitionDto;
   }
 

@@ -32,11 +32,14 @@ import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.OrganizationFlags;
 import org.sonar.server.organization.OrganizationFlagsImpl;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
+import org.sonar.server.rule.index.RuleIndexer;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestResponse;
 import org.sonar.server.ws.WsActionTester;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.sonar.db.permission.OrganizationPermission.ADMINISTER;
 
 public class EnableSupportActionTest {
@@ -50,7 +53,8 @@ public class EnableSupportActionTest {
 
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
   private OrganizationFlags organizationFlags = new OrganizationFlagsImpl(db.getDbClient());
-  private EnableSupportAction underTest = new EnableSupportAction(userSession, db.getDbClient(), defaultOrganizationProvider, organizationFlags);
+  private RuleIndexer ruleIndexer = mock(RuleIndexer.class);
+  private EnableSupportAction underTest = new EnableSupportAction(userSession, db.getDbClient(), defaultOrganizationProvider, organizationFlags, ruleIndexer);
   private WsActionTester tester = new WsActionTester(underTest);
 
   @Test
@@ -102,6 +106,15 @@ public class EnableSupportActionTest {
     call();
     verifyFeatureEnabled(true);
   }
+  @Test
+  public void should_delete_template_rules_from_index() {
+    logInAsSystemAdministrator("foo");
+
+    call();
+
+    verify(ruleIndexer).deleteRuleTemplatesFromIndex();
+  }
+
 
   @Test
   public void test_definition() {

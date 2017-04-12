@@ -101,12 +101,12 @@ public class QProfileBackuperMediumTest {
     db.ruleDao().insertRuleParam(dbSession, xooRule1.getDefinition(), RuleParamDto.createFor(xooRule1.getDefinition())
       .setName("max").setDefaultValue("10").setType(RuleParamType.INTEGER.type()));
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(xooRule1.getDefinition().getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, xooRule1.getDefinition().getKey());
 
     RuleDto xooRule2 = newXooX2().setSeverity("MAJOR").setLanguage("xoo");
     db.ruleDao().insert(dbSession, xooRule2.getDefinition());
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(xooRule2.getDefinition().getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, xooRule2.getDefinition().getKey());
 
     this.organization = OrganizationTesting.newOrganizationDto();
     db.organizationDao().insert(dbSession, organization);
@@ -123,7 +123,7 @@ public class QProfileBackuperMediumTest {
     RuleDefinitionDto blahRule = newRule(blahRuleKey).setSeverity("INFO").setLanguage("xoo");
     db.ruleDao().insert(dbSession, blahRule);
     dbSession.commit();
-    ruleIndexer.indexRuleDefinition(blahRule.getKey());
+    ruleIndexer.indexRuleDefinition(dbSession, blahRule.getKey());
 
     // create profile P1 with rules x2 and x1 activated
     QualityProfileDto profile = newXooP1(organization);
