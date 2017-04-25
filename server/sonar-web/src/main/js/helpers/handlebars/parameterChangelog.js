@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import Handlebars from 'handlebars/runtime';
-import { translateWithParameters } from '../l10n';
+const Handlebars = require('handlebars/runtime');
+const { translateWithParameters } = require('../l10n');
 
 module.exports = function(value, parameter) {
   if (parameter) {

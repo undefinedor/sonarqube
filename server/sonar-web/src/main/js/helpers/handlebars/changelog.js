@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import { translate, translateWithParameters } from '../../helpers/l10n';
-import { formatMeasure } from '../../helpers/measures';
+const { translate, translateWithParameters } = require('../../helpers/l10n');
+const { formatMeasure } = require('../../helpers/measures');
 
 module.exports = function(diff) {
   let message;

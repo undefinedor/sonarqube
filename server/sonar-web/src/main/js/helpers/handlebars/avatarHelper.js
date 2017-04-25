@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import md5 from 'blueimp-md5';
-import Handlebars from 'handlebars/runtime';
+const md5 = require('blueimp-md5');
+const Handlebars = require('handlebars/runtime');
 
 function gravatarServer() {
   const getStore = require('../../app/utils/getStore').default;
