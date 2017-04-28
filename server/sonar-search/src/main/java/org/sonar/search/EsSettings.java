@@ -117,10 +117,10 @@ public class EsSettings implements EsSettingsMBean {
     LOGGER.info("Elasticsearch listening on {}:{}", host, port);
 
     // disable multicast
-    builder.put("discovery.zen.ping.multicast.enabled", "false");
-    builder.put("transport.tcp.port", port);
-    builder.put("transport.host", host.getHostAddress());
-    builder.put("network.host", host.getHostAddress());
+    builder.put("discovery.zen.ping.multicast.enabled", "false")
+      .put("transport.tcp.port", port)
+      .put("transport.host", host.getHostAddress())
+      .put("network.host", host.getHostAddress());
 
     // Elasticsearch sets the default value of TCP reuse address to true only on non-MSWindows machines, but why ?
     builder.put("network.tcp.reuse_address", true);
@@ -132,11 +132,11 @@ public class EsSettings implements EsSettingsMBean {
     } else {
       LOGGER.warn("Elasticsearch HTTP connector is enabled on port {}. MUST NOT BE USED FOR PRODUCTION", httpPort);
       // see https://github.com/lmenezes/elasticsearch-kopf/issues/195
-      builder.put("http.cors.enabled", true);
-      builder.put("http.cors.allow-origin", "*");
-      builder.put("http.enabled", true);
-      builder.put("http.host", host.getHostAddress());
-      builder.put("http.port", httpPort);
+      builder.put("http.cors.enabled", true)
+        .put("http.cors.allow-origin", "*")
+        .put("http.enabled", true)
+        .put("http.host", host.getHostAddress())
+        .put("http.port", httpPort);
     }
   }
 
@@ -149,6 +149,31 @@ public class EsSettings implements EsSettingsMBean {
     }
   }
 
+  private String readInitialStateTimeout() {
+    String initialStateTimeout = props.value(ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT, "30s").toLowerCase().trim();
+
+    if (initialStateTimeout.endsWith("ms") ||
+      initialStateTimeout.endsWith("s") ||
+      initialStateTimeout.endsWith("m") ||
+      initialStateTimeout.endsWith("h") ||
+      initialStateTimeout.endsWith("d") ||
+      initialStateTimeout.endsWith("w")
+      ) {
+      try {
+        int timeUnitLength = 1;
+        if (initialStateTimeout.endsWith("ms")) {
+          timeUnitLength = 2;
+        }
+        Double.parseDouble(initialStateTimeout.substring(0, initialStateTimeout.length() - timeUnitLength));
+      } catch (NumberFormatException e) {
+        throw new IllegalStateException("Can not parse [" + initialStateTimeout + "]. Please check property " + ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT, e);
+      }
+    } else {
+      throw new IllegalStateException("Can not parse time unit [" + initialStateTimeout + "]. Please check property " + ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT);
+    }
+    return initialStateTimeout;
+  }
+
   private static void configureIndexDefaults(Settings.Builder builder) {
     builder
       .put("index.number_of_shards", "1")
@@ -159,11 +184,21 @@ public class EsSettings implements EsSettingsMBean {
 
   private void configureCluster(Settings.Builder builder) {
     int replicationFactor = props.valueAsInt(ProcessProperties.SEARCH_REPLICAS, 0);
+    int minimumMasterNodes = props.valueAsInt(ProcessProperties.SEARCH_MINIMUM_MASTER_NODES, 1);
+    String initialStateTimeOut = readInitialStateTimeout();
 
     if (clusterEnabled) {
       if (!props.contains(ProcessProperties.SEARCH_REPLICAS)) {
         // In data center edition there is 3 nodes, so if not defined, replicationFactor default value is 1
         replicationFactor = 1;
+      }
+      if (!props.contains(ProcessProperties.SEARCH_MINIMUM_MASTER_NODES)) {
+        // In data center edition there is 3 nodes, so if not defined, minimumMasterNodes default value is 2
+        minimumMasterNodes = 2;
+      }
+      if (!props.contains(ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT)) {
+        // Default value to 2 minutes for having two ES nodes (master)
+        initialStateTimeOut = "120s";
       }
 
       String hosts = props.value(ProcessProperties.CLUSTER_SEARCH_HOSTS, "");
@@ -171,7 +206,8 @@ public class EsSettings implements EsSettingsMBean {
       builder.put("discovery.zen.ping.unicast.hosts", hosts);
     }
 
-    builder.put("discovery.zen.minimum_master_nodes", 1)
+    builder.put("discovery.zen.minimum_master_nodes", minimumMasterNodes)
+      .put("discovery.initial_state_timeout", initialStateTimeOut)
       .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, replicationFactor)
       .put("cluster.name", getClusterName())
       .put("cluster.routing.allocation.awareness.attributes", "rack_id")

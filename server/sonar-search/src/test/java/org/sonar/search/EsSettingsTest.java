@@ -68,6 +68,8 @@ public class EsSettingsTest {
 
     assertThat(generated.get("index.number_of_replicas")).isEqualTo("0");
     assertThat(generated.get("discovery.zen.ping.unicast.hosts")).isNull();
+    assertThat(generated.get("discovery.zen.minimum_master_nodes")).isEqualTo("1");
+    assertThat(generated.get("discovery.initial_state_timeout")).isEqualTo("30s");
   }
 
   @Test
@@ -96,6 +98,28 @@ public class EsSettingsTest {
 
     assertThat(settings.get("index.number_of_replicas")).isEqualTo("1");
     assertThat(settings.get("discovery.zen.ping.unicast.hosts")).isEqualTo("1.2.3.4:9000,1.2.3.5:8080");
+    assertThat(settings.get("discovery.zen.minimum_master_nodes")).isEqualTo("2");
+    assertThat(settings.get("discovery.initial_state_timeout")).isEqualTo("120s");
+  }
+
+  @Test
+  public void incorrect_values_of_minimum_master_nodes() throws Exception {
+    Props props = minProps();
+    props.set(ProcessProperties.SEARCH_MINIMUM_MASTER_NODES, "ꝱꝲꝳପ");
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Value of property sonar.search.minimumMasterNodes is not an integer:");
+    Settings settings = new EsSettings(props).build();
+  }
+
+  @Test
+  public void cluster_is_enabled_with_defined_minimum_master_nodes() throws Exception {
+    Props props = minProps();
+    props.set(ProcessProperties.CLUSTER_ENABLED, "true");
+    props.set(ProcessProperties.SEARCH_MINIMUM_MASTER_NODES, "5");
+    Settings settings = new EsSettings(props).build();
+
+    assertThat(settings.get("discovery.zen.minimum_master_nodes")).isEqualTo("5");
   }
 
   @Test
@@ -124,6 +148,36 @@ public class EsSettingsTest {
 
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Value of property sonar.search.replicas is not an integer:");
+    Settings settings = new EsSettings(props).build();
+  }
+
+  @Test
+  public void incorrect_values_of_initialStateTimeout() throws Exception {
+    Props props = minProps();
+    props.set(ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT, "ꝱꝲꝳପ");
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Please check property sonar.search.initialStateTimeout");
+    Settings settings = new EsSettings(props).build();
+  }
+
+  @Test
+  public void no_time_unit_of_initialStateTimeout() throws Exception {
+    Props props = minProps();
+    props.set(ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT, "120");
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Please check property sonar.search.initialStateTimeout");
+    Settings settings = new EsSettings(props).build();
+  }
+
+  @Test
+  public void incorrect_time_unit_of_initialStateTimeout() throws Exception {
+    Props props = minProps();
+    props.set(ProcessProperties.SEARCH_INITIAL_STATE_TIMEOUT, "120ù");
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Please check property sonar.search.initialStateTimeout");
     Settings settings = new EsSettings(props).build();
   }
 
