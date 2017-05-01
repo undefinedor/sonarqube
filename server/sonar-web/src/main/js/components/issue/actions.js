@@ -18,12 +18,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 // @flow
-import { onFail } from '../../store/rootActions';
 import { parseIssueFromResponse } from '../../helpers/issues';
 import type { Issue } from './types';
 
 export const updateIssue = (
   onChange: Issue => void,
+  onFail: Error => void,
   resultPromise: Promise<*>,
   oldIssue?: Issue,
   newIssue?: Issue
@@ -48,6 +48,7 @@ export const updateIssue = (
       }
     },
     error => {
+      console.log(`testlog`, error); // eslint-disable-line
       onFail(error);
       if (optimisticUpdate) {
         // $FlowFixMe `oldIssue` is not null, because `optimisticUpdate` is true
